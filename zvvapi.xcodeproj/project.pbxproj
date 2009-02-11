@@ -1,0 +1,73 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXFileReference section */
+		4953DBEB0F4255E000C3C484 /* app.yaml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = app.yaml; sourceTree = "<group>"; };
+		4953DBEC0F4255E000C3C484 /* index.yaml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = index.yaml; sourceTree = "<group>"; };
+		4953DBED0F4255E000C3C484 /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
+		4953DBEE0F4264D700C3C484 /* schedule.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = schedule.py; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		492E01A70F42559500057F5F = {
+			isa = PBXGroup;
+			children = (
+				4953DBEB0F4255E000C3C484 /* app.yaml */,
+				4953DBEC0F4255E000C3C484 /* index.yaml */,
+				4953DBED0F4255E000C3C484 /* main.py */,
+				4953DBEE0F4264D700C3C484 /* schedule.py */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		492E01A90F42559500057F5F /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 492E01AC0F42559500057F5F /* Build configuration list for PBXProject "zvvapi" */;
+			compatibilityVersion = "Xcode 2.4";
+			hasScannedForEncodings = 0;
+			mainGroup = 492E01A70F42559500057F5F;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		492E01AA0F42559500057F5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+			};
+			name = Debug;
+		};
+		492E01AB0F42559500057F5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		492E01AC0F42559500057F5F /* Build configuration list for PBXProject "zvvapi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				492E01AA0F42559500057F5F /* Debug */,
+				492E01AB0F42559500057F5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 492E01A90F42559500057F5F /* Project object */;
+}
