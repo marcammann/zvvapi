@@ -11,6 +11,8 @@
 		4953DBEC0F4255E000C3C484 /* index.yaml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = index.yaml; sourceTree = "<group>"; };
 		4953DBED0F4255E000C3C484 /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
 		4953DBEE0F4264D700C3C484 /* schedule.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = schedule.py; sourceTree = "<group>"; };
+		49677CFB0F4395E2007D5E99 /* schedule.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = schedule.py; path = models/schedule.py; sourceTree = "<group>"; };
+		49677D590F43B0C5007D5E99 /* __init__.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = __init__.py; path = models/__init__.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -21,7 +23,17 @@
 				4953DBEC0F4255E000C3C484 /* index.yaml */,
 				4953DBED0F4255E000C3C484 /* main.py */,
 				4953DBEE0F4264D700C3C484 /* schedule.py */,
+				49677CFC0F4395EA007D5E99 /* Models */,
 			);
+			sourceTree = "<group>";
+		};
+		49677CFC0F4395EA007D5E99 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				49677D590F43B0C5007D5E99 /* __init__.py */,
+				49677CFB0F4395E2007D5E99 /* schedule.py */,
+			);
+			name = Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

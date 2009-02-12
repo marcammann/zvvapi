@@ -6,78 +6,66 @@
 #  Copyright (c) 2009 Codesofa. All rights reserved.
 #
 
-from google.appengine.ext import webapp
-from StringIO import StringIO
+from datetime import datetime, tzinfo, timedelta
+from urllib import unquote
 
-try:
-  from xml.etree.cElementTree import *
-except ImportError:
-  try:
-    from xml.etree.ElementTree import *
-  except ImportError:
-    from elementtree.ElementTree import *
+from models import schedule
+
+class GMT1(tzinfo):
+	def utcoffset(self, dt):
+		return timedelta(hours=1)
+	def dst(self, dt):
+		return timedelta(0)
+	def tzname(self,dt):
+		return "Europe/Zurich"
+
+
+from google.appengine.ext import webapp
 
 class Schedule(webapp.RequestHandler):
-	def get(self):		
+	def get(self, fromType, fromURL, toType, toURL, timeType, timeURL):
+		""" Sanitize From/To/Types """
+		typeD = lambda t: t is '' and 'stat' or t.split('%3A')[0]
+		fromType = typeD(fromType)
+		toType = typeD(toType)
+		
+		build = lambda v, t: {'value':v, 'type':t}
+		toP = build(unquote(toURL), toType)
+		fromP = build(unquote(fromURL), fromType)
+		
+		""" Sanitize Date/Time """
+		timeTypeD = lambda t: t is '' and 'dep' or t.split('%3A')[0]
+		timeType = timeTypeD(timeType)
+		
+		timeURL = unquote(timeURL)
+		try:
+			timeV = datetime.strptime(timeURL, '%H:%M')
+		except ValueError:
+			try:
+				timeV = datetime.strptime(timeURL, '%d.%m.%Y %H:%M')
+			except ValueError:
+				try:
+					timeV = datetime.strptime(timeURL, '%Y-%m-%d %H:%M')
+				except ValueError:
+					timeV = datetime.now(tz=GMT1())
+		
+		time = build(timeV, timeType)
+		
+		filters = {'changetime': self.request.get('changetime', 0),\
+					'changes': self.request.get('changes', None),\
+					'suppresslong': self.request.get('suppresslong', False),\
+					'groups': self.request.get('groups', False),\
+					'bicycles': self.request.get('bicycles', False),\
+					'flat': self.request.get('flat', False),\
+					'apikey': self.request.get('apikey', None)}
+		
+		s = schedule.Schedule()
+		
 		self.response.headers['Content-Type'] = 'text/xml'
-		root = Element('schedule')
-		""" Create Request Node """
-		requestNode = SubElement(root, 'request')
-		requestTimeNode = SubElement(requestNode, 'time')
-		requestValueNode = SubElement(requestNode, 'query')
-		requestCacheNode = SubElement(requestNode, 'cachehits')
+		xml = s.loadXML(fromP, toP, time, filters)
 		
-		""" Link Node """
-		linkNode = SubElement(root, 'link')
-		fromNode = SubElement(linkNode, 'from')
-		toNode = SubElement(linkNode, 'to')
-		durationNode = SubElement(linkNode, 'duration')
-		partsNode = SubElement(linkNode, 'parts')
-		""" From Node """
-		fromIdNode = SubElement(fromNode, 'id')
-		departureNode = SubElement(fromNode, 'time')
-		fromNameNode = SubElement(fromNode, 'name')
-		fromLocationNode = SubElement(fromNode, 'location')
-		fromLatNode = SubElement(fromLocationNode, 'lat')
-		fromLonNode = SubElement(fromLocationNode, 'lon')
-		fromDistanceNode = SubElement(fromLocationNode, 'distance')
-		""" To Node """
-		toIdNode = SubElement(toNode, 'id')
-		arrivalNode = SubElement(toNode, 'time')
-		toNameNode = SubElement(toNode, 'name')
-		toLocationNode = SubElement(toNode, 'location')
-		toLatNode = SubElement(toLocationNode, 'lat')
-		toLonNode = SubElement(toLocationNode, 'lon')
-		toDistanceNode = SubElement(toLocationNode, 'distance')
+		self.response.out.write('<?xml version="1.0"?>' + xml)
 		
-		
-		""" Part Node """
-		fromPartNode = SubElement(partsNode, 'from')
-		toPartNode = SubElement(partsNode, 'to')
-		lineNode = SubElement(partsNode, 'line')
-		""" From Part Node """
-		fromPartIdNode = SubElement(fromPartNode, 'id')
-		departurePartNode = SubElement(fromPartNode, 'time')
-		fromPartNameNode = SubElement(fromPartNode, 'name')
-		fromPartTrackNode = SubElement(fromPartNode, 'track')
-		fromPartLocationNode = SubElement(fromPartNode, 'location')
-		fromPartLatNode = SubElement(fromPartLocationNode, 'lat')
-		fromPartLonNode = SubElement(fromPartLocationNode, 'lon')
-		fromPartDistanceNode = SubElement(fromPartLocationNode, 'distance')
-		""" To Part Node """
-		toPartIdNode = SubElement(toPartNode, 'id')
-		arrivalPartNode = SubElement(toPartNode, 'time')
-		toPartNameNode = SubElement(toPartNode, 'name')
-		toPartTrackNode = SubElement(toPartNode, 'track')
-		toPartLocationNode = SubElement(toPartNode, 'location')
-		toPartLatNode = SubElement(toPartLocationNode, 'lat')
-		toPartLonNode = SubElement(toPartLocationNode, 'lon')
-		toPartDistanceNode = SubElement(toPartLocationNode, 'distance')		
-		
-		
-		file = StringIO()
-		tree = ElementTree(root)
-		tree.write(file)
-		
-		
-		self.response.out.write('<?xml version="1.0"?>' + file.getvalue())
+class ScheduleSimple(webapp.RequestHandler):
+	def get(self, fromURL, toURL):
+		self.response.out.write('hello')

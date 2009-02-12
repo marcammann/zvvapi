@@ -24,13 +24,8 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 
 from google.appengine.api.urlfetch import fetch
 
-class MainHandler(webapp.RequestHandler):
-	def get(self):
-		self.response.headers['Content-Type'] = 'text/plain'
-		self.response.out.write('Hello world!')
-
 application = webapp.WSGIApplication(
-									[('/schedule/', schedule.Schedule)],
+									[(r'/schedule/(stat%3A|addr%3A|wgs%3A|)([\w\d\s+%]+)/(stat%3A|addr%3A|wgs%3A|)([\w\d\s+%]+)/(dep%3A|arr%3A|)([\d\.+A%-]+)/', schedule.Schedule)],
 									debug=True)
 
 
