@@ -8,6 +8,7 @@
 
 try:
   from xml.etree.cElementTree import *
+  from xml.etree import cElementTree
 except ImportError:
   try:
     from xml.etree.ElementTree import *
@@ -16,7 +17,8 @@ except ImportError:
 
 from StringIO import StringIO
 from google.appengine.api import memcache
-
+import html5lib
+from html5lib import treebuilders
 
 import urllib
 
@@ -30,7 +32,7 @@ class Schedule:
 		stats = memcache.get_stats()
 		
 		if data is not None:
-			self._loadScheduleRemote(fromP, toP, time, filters)
+			return self._loadScheduleRemote(fromP, toP, time, filters)
 			return data
 		else:
 			root = Element('schedule')
@@ -111,7 +113,15 @@ class Schedule:
 								'REQ0JourneyDate':'Do, 12.02.09', 'REQ0JourneyTime':'03:30',\
 								'REQ0HafasSearchForw':1})
 		f = urllib.urlopen(baseurl, data)
+		all = f.readlines()
+		htmlDoc = StringIO(''.join(all[1:]))
+		parser = html5lib.HTMLParser(tree=treebuilders.getTreeBuilder("dom"))
+
+		tree = ElementTree().parse(parser.parse(htmlDoc).toxml('UTF-8'))
 		file = StringIO()
-		file.write(f.read())
+		tree.write(file)
 		
-		tree = tidy(file)
+		return file.getvalue()
+		
+		
+		

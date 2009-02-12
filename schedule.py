@@ -65,7 +65,3 @@ class Schedule(webapp.RequestHandler):
 		xml = s.loadXML(fromP, toP, time, filters)
 		
 		self.response.out.write('<?xml version="1.0"?>' + xml)
-		
-class ScheduleSimple(webapp.RequestHandler):
-	def get(self, fromURL, toURL):
-		self.response.out.write('hello')
