@@ -6,6 +6,8 @@
 #  Copyright (c) 2009 Codesofa. All rights reserved.
 #
 
+import web
+
 from datetime import datetime, tzinfo, timedelta
 from urllib import unquote
 
@@ -20,12 +22,10 @@ class GMT1(tzinfo):
 		return "Europe/Zurich"
 
 
-from google.appengine.ext import webapp
-
-class Schedule(webapp.RequestHandler):
-	def get(self, fromType, fromURL, toType, toURL, timeType, timeURL):
+class Schedule:
+	def GET(self, fromType, fromURL, toType, toURL, timeType, timeURL):
 		""" Sanitize From/To/Types """
-		typeD = lambda t: t is '' and 'stat' or t.split('%3A')[0]
+		typeD = lambda t: t is u'' and 'stat' or t.split(':')[0]
 		fromType = typeD(fromType)
 		toType = typeD(toType)
 		
@@ -34,7 +34,7 @@ class Schedule(webapp.RequestHandler):
 		fromP = build(unquote(fromURL), fromType)
 		
 		""" Sanitize Date/Time """
-		timeTypeD = lambda t: t is '' and 'dep' or t.split('%3A')[0]
+		timeTypeD = lambda t: t is u'' and 'dep' or t.split(':')[0]
 		timeType = timeTypeD(timeType)
 		
 		timeURL = unquote(timeURL)
@@ -51,17 +51,11 @@ class Schedule(webapp.RequestHandler):
 		
 		time = build(timeV, timeType)
 		
-		filters = {'changetime': self.request.get('changetime', 0),\
-					'changes': self.request.get('changes', None),\
-					'suppresslong': self.request.get('suppresslong', False),\
-					'groups': self.request.get('groups', False),\
-					'bicycles': self.request.get('bicycles', False),\
-					'flat': self.request.get('flat', False),\
-					'apikey': self.request.get('apikey', None)}
-		
+		filters = web.input(changetime=0, changes=None, suppresslong=False,\
+							groups=False, bicycles=False, flat=False, apikey=None)
+							
 		s = schedule.Schedule()
-		
-		self.response.headers['Content-Type'] = 'text/xml'
 		xml = s.loadXML(fromP, toP, time, filters)
 		
-		self.response.out.write('<?xml version="1.0"?>' + xml)
+		web.header('Content-Type', 'text/xml')
+		return '<?xml version="1.0"?><schedules>' + xml + '</schedules>'
