@@ -20,7 +20,7 @@ from google.appengine.api import memcache
 import html5lib
 from html5lib import treebuilders
 
-import urllib
+import httpl
 
 class Schedule:
 	def loadXML(self, fromP, toP, time, filters):
@@ -115,11 +115,15 @@ class Schedule:
 		f = urllib.urlopen(baseurl, data)
 		all = f.readlines()
 		htmlDoc = StringIO(''.join(all[1:]))
-		parser = html5lib.HTMLParser(tree=treebuilders.getTreeBuilder("dom"))
-
-		tree = ElementTree().parse(parser.parse(htmlDoc).toxml('UTF-8'))
+		parser = html5lib.HTMLParser(tree=treebuilders.getTreeBuilder("etree", cElementTree))
+		
+		root = parser.parse(htmlDoc)
+		tree = ElementTree(root)
 		file = StringIO()
 		tree.write(file)
+		
+		for target in root.findall("*/link[@href=/css/hafas_zvv_result.css]"):
+			print target.attrib.get("href")
 		
 		return file.getvalue()
 		

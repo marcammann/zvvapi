@@ -13,14 +13,12 @@
 		4953DBEE0F4264D700C3C484 /* schedule.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = schedule.py; sourceTree = "<group>"; };
 		49677CFB0F4395E2007D5E99 /* schedule.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = schedule.py; path = models/schedule.py; sourceTree = "<group>"; };
 		49677D590F43B0C5007D5E99 /* __init__.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = __init__.py; path = models/__init__.py; sourceTree = "<group>"; };
-		49BA50FF0F444F4900BA7B70 /* lib */ = {isa = PBXFileReference; lastKnownFileType = folder; path = lib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		492E01A70F42559500057F5F = {
 			isa = PBXGroup;
 			children = (
-				49BA50FF0F444F4900BA7B70 /* lib */,
 				4953DBEB0F4255E000C3C484 /* app.yaml */,
 				4953DBEC0F4255E000C3C484 /* index.yaml */,
 				4953DBED0F4255E000C3C484 /* main.py */,
