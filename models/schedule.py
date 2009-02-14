@@ -38,36 +38,19 @@ class Schedule:
 			return data
 		else:
 			requests = self._getMulti(['zurich','st.gallen'], ['bern','genf'], time, filters)
-			nodes = [self._dataToXml(data, fromStation, toStation, timeStation, filterStation) \
-				for fromStation, toStation, timeStation, filterStation, data in requests]
+			nodes = [xml for fromStation, toStation, timeStation, filterStation, response, data, xml in requests]
+			root = Element('schedules')
+			requestNode = SubElement(root, 'request')
+			requestTimeNode = SubElement(requestNode, 'time')
+			requestTimeNode.text = datetime.today().strftime("%Y-%m-%d %H:%M:%S%z")
+			requestValueNode = SubElement(requestNode, 'query')
+			requestValueNode.text = web.url()
+			requestCacheKeyNode = SubElement(requestNode, 'cachekey')
+			requestCacheKeyNode.text = cachekey;
 			
 			file = reduce(lambda a,b: a+b, nodes)
 			return file
 			"""memcache.add(cachekey, file.getvalue())"""
-		
-				
-	def _loadSingleScheduleRemote(self, fromStation, toStation, time, filters):
-		""" Gone params:
-			'start_search':'yes','start':1,'protocol':'http:','mylanguage':'d','servername':'fahrplan.zvv.ch','fromIsZSG':'no','toIsZSG':'no',
-											'wDazExt0':'Mo|Di|Mi|Do|Fr|Sa|So',
-			"""
-		
-		htmlDoc = StringIO(content)
-		all = htmlDoc.readlines()
-		htmlDoc = StringIO(''.join(all[1:]))
-		
-		parser = html5lib.HTMLParser(tree=treebuilders.getTreeBuilder("etree", cElementTree))
-		
-		root = parser.parse(htmlDoc)
-		tree = ElementTree(root)
-		file = StringIO()
-		tree.write(file)
-		
-		for target in root.findall("*/link"):
-			print target.attrib.get("href")
-		
-		return file.getvalue()
-	
 	
 	def _getMulti(self, fromStations, toStations, time, filters):
 		timeout = 2.0
@@ -82,24 +65,65 @@ class Schedule:
 			timeout = timeout - UPDATE_INTERVAL
 			sleep(UPDATE_INTERVAL)
 			
-		return [ (x.fromStation, x.toStation, x.time, x.filters, x.response) for x in threads ]
+		return [ (x.fromStation, x.toStation, x.time, x.filters, x.response, x.data, x.xml) for x in threads ]
 	
 	
-	def _dataToXml(self, data, fromStation, toStation, time, filters):
+class URLThread(Thread):
+	def __init__(self, fromStation, toStation, time, filters):
+		super(URLThread, self).__init__()
+		self.response = None
+		self.fromStation = fromStation
+		self.toStation = toStation
+		self.time = time
+		self.filters = filters
+		
+		
+	def run(self):
+		self._loadRawFromURL()
+		self._parseRaw()
+		self._setupXML()
+	
+	def _loadRawFromURL(self):
+		baseurl = 'http://fahrplan2.fahrplan.zvv.ch/bin/zvv/query.exe/dn?L=no_title'
+		data = urlencode({'usr':'www.zvv.ch','frames':'no','start.x':79,'start.y':9,'lg':'d','queryPageDisplayed':'yes',\
+								'gis1':'Haltestelle','REQ0JourneyStopsS0A':1, 'REQ0JourneyStopsS0G':'zurich hb',\
+								'gis2':'Haltestelle', 'REQ0JourneyStopsZ0A':1, 'REQ0JourneyStopsZ0G':'Bern',\
+								'REQ0JourneyDate':'Do, 12.02.09', 'REQ0JourneyTime':'03:30',\
+								'REQ0HafasSearchForw':1})
+		
+		self.request = httplib2.Http(".cache")
+		resp, content = self.request.request(baseurl, "POST", data)
+		
+		self.response = content
+		self.responseHeaders = resp
+	
+	def _checkQueryError(self):
+		return False
+	
+	def _parseRaw(self):
+		htmlDoc = StringIO(self.responses)
+		all = htmlDoc.readlines()
+		htmlDoc = StringIO(''.join(all[1:]))
+		
+		parser = html5lib.HTMLParser(tree=treebuilders.getTreeBuilder("etree", cElementTree))
+		
+		root = parser.parse(htmlDoc)
+		tree = ElementTree(root)
+		file = StringIO()
+		tree.write(file)
+		
+		for target in root.findall("*/link"):
+			value = target.attrib.get("href")
+		
+		self.data = {'v':value}
+		
+	def _setupXML(self):
+		""" Loads parsed data into an XML """
+		
 		web.debug(fromStation)
 		web.debug(toStation)
 		web.debug(filters)
 		root = Element('schedule')
-		""" Create Request Node """
-		requestNode = SubElement(root, 'request')
-		requestTimeNode = SubElement(requestNode, 'time')
-		requestTimeNode.text = datetime.today().strftime("%Y-%m-%d %H:%M:%S%z")
-		requestValueNode = SubElement(requestNode, 'query')
-		requestValueNode.text = web.url()
-		requestCacheKeyNode = SubElement(requestNode, 'cachekey')
-		"""requestCacheKeyNode.text = cachekey;"""
-		"""requestCacheNode = SubElement(requestNode, 'cachehits') """
-		"""requestCacheNode.text = "%s" % stats['hits'] """
 		
 		""" Link Node """
 		linkNode = SubElement(root, 'link')
@@ -146,37 +170,6 @@ class Schedule:
 		toPartLatNode = SubElement(toPartLocationNode, 'lat')
 		toPartLonNode = SubElement(toPartLocationNode, 'lon')
 		toPartDistanceNode = SubElement(toPartLocationNode, 'distance')		
-		
-		
-		file = StringIO()
-		tree = ElementTree(root)
-		tree.write(file)
-		
-		return file.getvalue()
-	
-	
-	
-class URLThread(Thread):
-	def __init__(self, fromStation, toStation, time, filters):
-		super(URLThread, self).__init__()
-		self.response = None
-		self.fromStation = fromStation
-		self.toStation = toStation
-		self.time = time
-		self.filters = filters
-		
-		
-	def run(self):
-		baseurl = 'http://fahrplan2.fahrplan.zvv.ch/bin/zvv/query.exe/dn?L=no_title'
-		data = urlencode({'usr':'www.zvv.ch','frames':'no','start.x':79,'start.y':9,'lg':'d','queryPageDisplayed':'yes',\
-								'gis1':'Haltestelle','REQ0JourneyStopsS0A':1, 'REQ0JourneyStopsS0G':'zurich hb',\
-								'gis2':'Haltestelle', 'REQ0JourneyStopsZ0A':1, 'REQ0JourneyStopsZ0G':'Bern',\
-								'REQ0JourneyDate':'Do, 12.02.09', 'REQ0JourneyTime':'03:30',\
-								'REQ0HafasSearchForw':1})
-		
-		self.request = httplib2.Http(".cache")
-		resp, content = self.request.request(baseurl, "POST", data)
-		
-		self.response = content
-		self.responseHeaders = resp
+
+		self.xml = root
 		
