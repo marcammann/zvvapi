@@ -11,7 +11,7 @@ import web
 from datetime import datetime, tzinfo, timedelta
 from urllib import unquote
 
-from models import schedule
+from models import schedule,geo
 
 class GMT1(tzinfo):
 	def utcoffset(self, dt):
@@ -39,7 +39,7 @@ class Schedule:
 		
 		timeURL = unquote(timeURL)
 		try:
-			timeV = datetime.strptime(timeURL, '%H:%M')
+			timeV = datetime.strptime(datetime.now(tz=GMT1()).strftime("%Y-%m-%d") + timeURL, '%Y-%m-%d %H:%M')
 		except ValueError:
 			try:
 				timeV = datetime.strptime(timeURL, '%d.%m.%Y %H:%M')

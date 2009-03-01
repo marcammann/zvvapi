@@ -8,10 +8,11 @@
 
 import web
 import schedule
+import sys
 
 urls = ("/schedule/(stat:|addr:|wgs:|)([\w\d\s+%]+)/(stat:|addr:|wgs:|)([\w\d\s+%]+)/(dep:|arr:|)([\d:\.+ -]+)/", "schedule.Schedule")
 app = web.application(urls, globals())
 
 web.webapi.internalerror = web.debugerror
 if __name__ == "__main__":
-    app.run()
+	app.run()
