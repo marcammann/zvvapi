@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 #
 #  schedule.py
 #  zvvapi
@@ -5,7 +8,6 @@
 #  Created by Marc Ammann on 2/11/09.
 #  Copyright (c) 2009 Codesofa. All rights reserved.
 #
-
 import web
 
 from datetime import datetime, tzinfo, timedelta

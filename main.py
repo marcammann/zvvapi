@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 #
 #  main.py
 #  zvvapi
@@ -10,8 +13,8 @@ import web
 import schedule
 import sys
 
-urls = ("/schedule/(stat:|addr:|wgs:|)([\w\d\s+%]+)/(stat:|addr:|wgs:|)([\w\d\s+%]+)/(dep:|arr:|)([\d:\.+ -]+)/", "schedule.Schedule")
-app = web.application(urls, globals())
+urls = (r"/schedule/(stat:|addr:|wgs:|)(.+)/(stat:|addr:|wgs:|)(.+)/(dep:|arr:|)([\d:\.+ -]+)/", "schedule.Schedule")
+app = web.application(urls, globals(), autoreload=True)
 
 web.webapi.internalerror = web.debugerror
 if __name__ == "__main__":
