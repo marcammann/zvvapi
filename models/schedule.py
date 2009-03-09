@@ -208,7 +208,6 @@ class StationURLThread(Thread):
 	
 	def _loadRawFromURL(self):
 		isdep = lambda time:time['type'] == 'dep' and 1 or 0
-								
 		changetime = int(self.filters['changetime'])
 		changetimeURL = (changetime < 5 and '0:1') or (changetime < 10 and '5:2') or (changetime < 15 and '10:3') or (changetime < 20 and '15:4') or (changetime < 30 and '20:5') or (changetime >= 30 and '30:6')
 		bicycles = int(self.filters['bicycles'])
@@ -228,8 +227,6 @@ class StationURLThread(Thread):
 								'gis2':'Haltestelle', 'REQ0JourneyStopsZ0A':1, 'REQ0JourneyStopsZ0G':self.toStation.encode('iso-8859-1'),\
 								'REQ0JourneyDate':self.time['value'].strftime('%d.%m.%y'), 'REQ0JourneyTime':self.time['value'].strftime('%H:%M'),\
 								'REQ0HafasSearchForw':isdep(self.time)})
-								
-		web.debug(data)
 		
 		self.request = httplib2.Http(".cache")
 		resp, content = self.request.request(baseurl, "POST", data)
