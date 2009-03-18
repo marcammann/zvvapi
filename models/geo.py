@@ -19,15 +19,19 @@ import math
 db = web.database(dbn="mysql", db="zvv", user="zvv", pw="m1n3r4lw4ss3r")
 
 class Util:
-	def distance(self, fromP, toP):
-		latFrom = math.radians(fromP['latitude'])
-		lonFrom = math.radians(fromP['longitude'])
-		latTo = math.radians(toP['latitude'])
-		lonTo = math.radians(toP['longitude'])
+	def distance(self, source, destination):
+		try:
+			source_lat = math.radians(source['latitude'])
+			source_lon = math.radians(source['longitude'])
+			destination_lat = math.radians(destination['latitude'])
+			destination_lon = math.radians(destination['longitude'])
+		except IndexError:
+			return None
+		
 		R = 6367.45
-		dLat = latTo - latFrom
-		dLon = lonTo - lonFrom
-		a = math.pow(math.sin(dLat/2), 2) + math.cos(latFrom) * math.cos(latTo) * math.pow(math.sin(dLon/2), 2)
+		dLat = destination_lat - source_lat
+		dLon = destination_lon - source_lon
+		a = math.pow(math.sin(dLat/2), 2) + math.cos(source_lat) * math.cos(destination_lat) * math.pow(math.sin(dLon/2), 2)
 		c = 2*math.atan2(math.sqrt(a), math.sqrt(1-a))
 		d = '%.1f' % (R * c * 1000)
 		return d
@@ -37,17 +41,17 @@ class Geocode:
 		self.address = address
 		self.latitude = None
 		self.longitude = None
-		self._loadKML()
+		self._load_KML()
 	
-	def _loadKML(self):
-		baseURL = 'http://maps.google.ch'
+	def _load_KML(self):
+		base_URL = 'http://maps.google.ch'
 		data = urlencode({'q':self.address.encode('utf-8'), 'output':'kml'})
-		requestURL = baseURL + '?' + data
+		request_URL = base_URL + '?' + data
 		h = httplib2.Http(".cache")
 		resp, content = h.request(requestURL, "GET")
-		self._parseKML(content)
+		self._parse_KML(content)
 	
-	def _parseKML(self, content):
+	def _parse_KML(self, content):
 		tree = etree.parse(StringIO(content))
 		try:
 			self.latitude = tree.xpath("//*[local-name()='latitude']/text()")[0]
@@ -58,11 +62,11 @@ class Geocode:
 class Geostation:
 	def __init__(self, latitude, longitude):
 		self.stations = None
-		self._loadStations(latitude, longitude)
+		self._load_stations(latitude, longitude)
 	
-	def _loadStations(self, latitude, longitude):
+	def _load_stations(self, latitude, longitude):
 		query = 'SELECT *, 6367.45 * 2 * ASIN(SQRT(  POWER(SIN(($latitude - dest.station_lat) * pi()/180 / 2), 2) + COS($latitude * pi()/180) *  COS(dest.station_lat * pi()/180) * POWER(SIN(($longitude - dest.station_lon) * pi()/180 / 2), 2)  )) as distance \
-				FROM zvv_station dest ORDER BY distance LIMIT 6'
+				FROM zvv_station dest ORDER BY distance LIMIT 20'
 		res = db.query(query, {'latitude':latitude, 'longitude':longitude})
 		if (len(res)):
 			self.stations = [row['station_name'] for row in res]
@@ -71,9 +75,6 @@ class Geostation:
 			self.stations = None
 			return
 	
-	def getStations(self):
+	def get_stations(self):
 		return self.stations
-			
-		
-		
 		

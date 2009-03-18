@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 #
 #  schedule.py
 #  zvvapi
@@ -23,41 +22,54 @@ class GMT1(tzinfo):
 	def tzname(self,dt):
 		return "Europe/Zurich"
 
-
-class Schedule:
-	def GET(self, fromType, fromURL, toType, toURL, timeType, timeURL):
-		""" Sanitize From/To/Types """
-		typeD = lambda t: t is u'' and 'stat' or t.split(':')[0]
-		fromType = typeD(fromType)
-		toType = typeD(toType)
-		
-		build = lambda v, t: {'value':v, 'type':t}
-		toP = build(unquote(toURL), toType)
-		fromP = build(unquote(fromURL), fromType)
-		
-		""" Sanitize Date/Time """
-		timeTypeD = lambda t: t is u'' and 'dep' or t.split(':')[0]
-		timeType = timeTypeD(timeType)
-		
-		timeURL = unquote(timeURL)
+type = lambda t: t is u'' and 'stat' or t.split(':')[0]
+toarray = lambda v, t: {'value':v, 'type':unicode(t)}
+timetype = lambda t: t is u'' and 'dep' or t.split(':')[0]
+def requesttime(time):
+	try:
+		res = datetime.strptime(datetime.now(tz=GMT1()).strftime("%Y-%m-%d") + time, '%Y-%m-%d %H:%M')
+	except ValueError:
 		try:
-			timeV = datetime.strptime(datetime.now(tz=GMT1()).strftime("%Y-%m-%d") + timeURL, '%Y-%m-%d %H:%M')
+			res = datetime.strptime(time, '%d.%m.%Y %H:%M')
 		except ValueError:
 			try:
-				timeV = datetime.strptime(timeURL, '%d.%m.%Y %H:%M')
+				res = datetime.strptime(time, '%Y-%m-%d %H:%M')
 			except ValueError:
-				try:
-					timeV = datetime.strptime(timeURL, '%Y-%m-%d %H:%M')
-				except ValueError:
-					timeV = datetime.now(tz=GMT1())
+				res = datetime.now(tz=GMT1())
+	return res
+
+class Schedule:
+	def GET(self, source_type, source_value, destination_type, destination_value, time_type, time_value):
+		# Sanitize From/To/Types
+		source_type = type(source_type)
+		destination_type = type(destination_type)
 		
-		time = build(timeV, timeType)
+		source = toarray(unquote(source_value), source_type)
+		destination = toarray(unquote(destination_value), destination_type)
+		
+		# Sanitize Date/Time
+		time_type = timetype(time_type)
+		time_value = requesttime(unquote(time_value))
+		time = toarray(time_value, time_type)
 		
 		filters = web.input(changetime=0, changes=None, suppresslong=False,\
 							groups=False, bicycles=False, flat=False, apikey=None)
 							
 		s = schedule.Schedule()
-		xml = s.loadXML(fromP, toP, time, filters)
+		xml = s.load_XML(source, destination, time, filters)
 		
 		web.header('Content-Type', 'text/xml')
 		return '<?xml version="1.0"?><schedules>' + xml + '</schedules>'
+
+class Station:
+	def GET(self, pos_type, pos_value, time_value):
+		# Sanitize From/Time
+		pos_type = type(pos_type)
+		pos = toarray(unquote(pos_value), pos_type)
+		
+		time_value = requesttime(unquote(time_value))
+		filters = web.input(apikey=None)
+		
+		web.header('Content-Type', 'text/xml')
+		return '<?xml version="1.0"?><station>foo</station>'
+		

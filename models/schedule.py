@@ -31,96 +31,100 @@ db = web.database(dbn="mysql", db="zvv", user="zvv", pw="m1n3r4lw4ss3r")
 class Schedule:
 	def __init__(self):
 		self.threads = None
-		self.currentThread = None
-		self.blackslist = []
+		self.journeys = []
+		
 
-	def loadXML(self, fromP, toP, time, filters):
-		cachekey = fromP['value'] + str(fromP['type']) + toP['value'] + str(toP['type'])\
+	def load_XML(self, source, destination, time, filters):
+		cachekey = source['value'] + str(source['type']) + destination['value'] + str(destination['type'])\
 					+ str(time['value']) + str(time['type']) + str(filters['changetime']) + \
 					str(filters['suppresslong']) + str(filters['groups']) + \
 					str(filters['bicycles']) + str(filters['flat']) + str(filters['changes'])
 		
-		"""data = memcache.get(cachekey)"""
+		# data = memcache.get(cachekey)
 		data = None
 		if data is not None:
 			return data
 		else:
-			if fromP['type'] == 'addr':
-				geo = Geocode(fromP['value'])
-				fromS = Geostation(geo.latitude, geo.longitude).getStations()
-				fromPos = (geo.latitude, geo.longitude)
-			elif fromP['type'] == 'wgs':
-				s = Geostation(fromP['value'].split(',')[0], fromP['value'].split(',')[1])
-				fromS = s.getStations()
-				fromPos = (fromP['value'].split(',')[0], fromP['value'].split(',')[1])
-			else:
-				fromS = [fromP['value']]
-				fromPos = None
-				
-			if toP['type'] == 'addr':
-				geo = Geocode(toP['value'])
-				toS = Geostation(geo.latitude, geo.longitude).getStations()
-				toPos = (geo.latitude, geo.longitude)
-			elif toP['type'] == 'wgs':
-				s = Geostation(toP['value'].split(',')[0], toP['value'].split(',')[1])
-				toS = s.getStations()
-				toPos = (toP['value'].split(',')[0], toP['value'].split(',')[1])
-			else:
-				toS = [toP['value']]
-				toPos = None
-			
 			try:
-				fromPos = {'latitude':float(fromPos[0]), 'longitude':float(fromPos[1])}
-				toPos = {'latitude':float(toPos[0]), 'longitude':float(toPos[1])}
-			except TypeError:
-				fromPos = None
-				toPost = None
+				source_container = self.get_stations(source)
+				destination_container = self.get_stations(destination)
+				source_stations = source_container['stations']
+				destination_stations = destination_container['stations']
+			except Exception:
+				raise
+				return None
 			
-			if len(toS) > 2 and len(fromS) > 2:
-				toS = toS[:4]
-				fromS = fromS[:4]
+			max_range = len(source_stations) > len(destination_stations) and len(source_stations) or len(destination_stations)
+			
+			web.debug(source_stations)
+			web.debug(destination_stations)
+			
+
+			
+			""" combinate journeys in a nice way """
+			min = lambda a,b: a if a < b else b
+			journeys = []
+			for i in range(0, max_range):
+				min_dest_range = min(i, len(destination_stations))
+				min_src_range = min(i, len(source_stations)-1)
 				
-			web.debug(fromS)
-			web.debug(toS)
+				if	i < len(source_stations) and min_dest_range > 0:
+					for j in range(0, min_dest_range):
+						journeys.append({'source': source_stations[i], 'destination': destination_stations[j]})
+				if i < len(destination_stations):
+					for k in range(0, min_src_range+1):
+						journeys.append({'source': source_stations[k], 'destination': destination_stations[i]})
 			
-			refpos = toPos and fromPos or toPos
-			#web.debug(refpos)
-			requests = self._getMulti(fromS, toS, time, filters, refpos)
-			dups = 0
-			nodes = []
-			passed = []
-			self.blacklist = [] #stations who change their name and produce dups
-			for fromStation, toStation, timeStation, filterStation, response, data, xml, parsedFrom, parsedTo in requests:
-				try:
-					i = passed.index((parsedFrom, parsedTo))
-					if parsedFrom != fromStation:
-						self.blacklist.append(fromStation)
-					if parsedTo != toStation:
-						self.blacklist.append(toStation)
-					dups += 1
-				except ValueError:
-					passed.append((parsedFrom, parsedTo))
-					nodes.append(xml)
+			timeout = 20.0
+			def alive_count(lst):
+				alive = map(lambda x:1 if x.isAlive() else 0, lst)
+				return reduce(lambda x,y: x+y, alive)
 			
-			# For later use
-			"""if dups is not 0:
-				i = 0
-				while i < dups:
-					request = self._getNext()
-					if request:
-						fromStation, toStation, timeStation, filterStation, response, data, xml, parsedFrom, parsedTo = request
-						web.debug(self.blacklist)
-						web.debug(passed)
-						web.debug(parsedFrom)
-						web.debug(parsedTo)
-						try:
-							k = passed.index((parsedFrom, parsedTo))
-						except ValueError:
-							i += 1
-							passed.append((parsedFrom, parsedTo))
-							nodes.append(xml)
+			initial_thread_count = 8
+			threads = [StationURLThread(j['source'], j['destination'], time, filters) for j in journeys]
+			map(lambda x: x.start(), threads[:initial_thread_count])
+			
+			def is_duplicate(thread, completed_threads):
+				for t in completed_threads:
+					if t.parsedFromStation == thread.parsedFromStation and t.parsedToStation == thread.parsedToStation:
+						web.debug(t.parsedFromStation + ':' + thread.parsedFromStation)
+						return True
 					else:
-						break"""
+						continue
+				return False
+			
+			web.debug(alive_count(threads))
+			
+			ct = initial_thread_count
+			result_threads = []
+			worker_threads = threads
+			while alive_count(worker_threads) > 0 and timeout > 0:
+				timeout -= UPDATE_INTERVAL
+				for t in worker_threads:
+					if t.isAlive() is False and t.xml is None and t.did_run is True:
+						worker_threads.remove(t)
+						if ct < len(threads):
+							threads[ct].start()
+							timeout += 10
+							web.debug('spawning thread because of empty xml')
+							ct += 1
+					elif t.isAlive() is False and t.xml is not None and is_duplicate(t, result_threads) is True:
+						worker_threads.remove(t)
+						if ct < len(threads):
+							threads[ct].start()
+							timeout += 10
+							web.debug('spawning thread because of duplicateness')
+							ct += 1
+					elif t.isAlive() is False and t.xml is not None and is_duplicate(t, result_threads) is False:
+						worker_threads.remove(t)
+						result_threads.append(t)
+				sleep(UPDATE_INTERVAL)
+			
+			for t in threads:
+				if t.isAlive() is  False and t.xml is not None and is_duplicate(t, result_threads) is False:
+					result_threads.append(t)
+			
+			nodes = [t.xml for t in result_threads]
 			
 			root = etree.Element('schedules')
 			requestNode = etree.SubElement(root, 'request')
@@ -135,9 +139,9 @@ class Schedule:
 			node.text = time['value'].strftime("%Y-%m-%d %H:%M")
 			conc = lambda x: x['type']+ ':' + x['value']
 			node = etree.SubElement(requestNode, 'from')
-			node.text = conc(fromP)
+			node.text = conc(source)
 			node = etree.SubElement(requestNode, 'to')
-			node.text = conc(toP)
+			node.text = conc(destination)
 			node = etree.SubElement(requestNode, 'filters')
 			node.text = str(filters)
 			
@@ -146,47 +150,29 @@ class Schedule:
 					elementNode = root.append(node)
 			
 			return etree.tostring(root, method='xml', encoding="UTF-8")
-			
 			"""memcache.add(cachekey, file.getvalue())"""
 	
-	def _getMulti(self, fromStations, toStations, time, filters, refpos = None):
-		timeout = 15.0
-		def alive_count(lst):
-			alive = map(lambda x:1 if x.isAlive() else 0, lst)
-			return reduce(lambda x,y: x+y, alive)
-			
-		self.threads = [StationURLThread(fromStation, toStation, time, filters, refpos) for toStation in toStations for fromStation in fromStations]
-		threads = self.threads[:6]
-		#web.debug([thread.toStation for thread in threads])
-		map(lambda x: x.start(), threads)
-		self.currentThread = MAX_THREADS
-		
-		while alive_count(threads) > 0 and timeout > 0.0:
-			timeout = timeout - UPDATE_INTERVAL
-			sleep(UPDATE_INTERVAL)
-			
-		return [ (x.fromStation, x.toStation, x.time, x.filters, x.response, x.data, x.xml, x.parsedFromStation, x.parsedToStation) for x in threads ]
-	
-	def _getNext(self):
-		if len(self.threads) > self.currentThread + 1:
-			timeout = 3
-			thread = self.threads[self.currentThread+1]
-			
-			try:
-				self.blacklist.index(thread.fromStation)
-				self.blacklist.index(thread.toStation)
-				return False
-			except ValueError:
-				thread.start()
+	def get_stations(self, pos):
+		try:
+			stations = None
+			position = None
+			if pos['type'] == u'addr':
+				geo = Geocode(pos['value'])
+				stations = Geostation(geo.latitude, geo.longitude).get_stations()
+				position = {'latitude':geo.latitude, 'longitude':geo.longitude}
+			elif pos['type'] == u'wgs':
+				geo = pos['value'].split(',')
+				stations = Geostation(geo[0], geo[1]).get_stations()
+				position = {'latitude':geo[0], 'longitude':geo[1]}
+			elif pos['type'] == u'stat':
+				stations = [pos['value']]
+				position = None
+			else:
+				raise Exception
 				
-			while thread.isAlive() and timeout > 0.0:
-				timeout = timeout - UPDATE_INTERVAL
-				sleep(UPDATE_INTERVAL)
-			
-			self.currentThread += 1
-			return (thread.fromStation, thread.toStation, thread.time, thread.filters, thread.response, thread.data, thread.xml, thread.parsedFromStation, thread.parsedToStation)
-		else:
-			return False
+			return {'stations': stations, 'position': position}
+		except Exception:
+			raise
 	
 class StationURLThread(Thread):
 	def __init__(self, fromStation, toStation, time, filters, refpos = None):
@@ -201,9 +187,11 @@ class StationURLThread(Thread):
 		self.data = None
 		self.xml = None
 		self.refpos = refpos
+		self.did_run = False
 		#web.debug(self.refpos)
 		
 	def run(self):
+		self.did_run = True
 		self._setupXML()
 	
 	def _loadRawFromURL(self):
