@@ -48,10 +48,10 @@ def profile():
 	#source_value = u'Badenerstrasse 363, 8003, Zürich'
 	#destination_type = 'addr'
 	#destination_value = u'Schweighofstrasse 418, 8055 Zürich'
-	source_type = 'stat'
-	source_value = 'Schaufelbergerstrasse'
+	source_type = 'addr'
+	source_value = u'Zürich, Schaufelbergerstrasse'
 	destination_type = 'stat'
-	destination_value = 'Paradeplatz'	
+	destination_value = u'Paradeplatz'	
 	filters = {'changetime':0, 'changes':None, 'suppresslong':False, 'groups':False, 'bicycles':False, 'flat':False, 'apikey':None}
 	source = toarray(source_value, source_type)
 	destination = toarray(destination_value, destination_type)
@@ -66,8 +66,8 @@ class Schedule:
 		source_type = type(source_type)
 		destination_type = type(destination_type)
 		
-		source = toarray(unquote(source_value), source_type)
-		destination = toarray(unquote(destination_value), destination_type)
+		source = toarray(unicode(unquote(source_value)), source_type)
+		destination = toarray(unicode(unquote(destination_value)), destination_type)
 		
 		# Sanitize Date/Time
 		time_type = timetype(time_type)
