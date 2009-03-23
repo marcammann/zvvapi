@@ -21,10 +21,10 @@ db = web.database(dbn="mysql", db="zvv", user="zvv", pw="m1n3r4lw4ss3r")
 class Util:
 	def distance(self, source, destination):
 		try:
-			source_lat = math.radians(source['latitude'])
-			source_lon = math.radians(source['longitude'])
-			destination_lat = math.radians(destination['latitude'])
-			destination_lon = math.radians(destination['longitude'])
+			source_lat = math.radians(float(source['latitude']))
+			source_lon = math.radians(float(source['longitude']))
+			destination_lat = math.radians(float(destination['latitude']))
+			destination_lon = math.radians(float(destination['longitude']))
 		except IndexError:
 			return None
 		
@@ -47,8 +47,8 @@ class Geocode:
 		base_URL = 'http://maps.google.ch'
 		data = urlencode({'q':self.address.encode('utf-8'), 'output':'kml'})
 		request_URL = base_URL + '?' + data
-		h = httplib2.Http(".cache")
-		resp, content = h.request(requestURL, "GET")
+		h = httplib2.Http()
+		resp, content = h.request(request_URL, "GET")
 		self._parse_KML(content)
 	
 	def _parse_KML(self, content):

@@ -32,6 +32,7 @@ class Schedule:
 	def __init__(self):
 		self.threads = None
 		self.journeys = []
+		self.refpos = None
 		
 
 	def load_XML(self, source, destination, time, filters):
@@ -39,7 +40,6 @@ class Schedule:
 					+ str(time['value']) + str(time['type']) + str(filters['changetime']) + \
 					str(filters['suppresslong']) + str(filters['groups']) + \
 					str(filters['bicycles']) + str(filters['flat']) + str(filters['changes'])
-		
 		# data = memcache.get(cachekey)
 		data = None
 		if data is not None:
@@ -47,6 +47,7 @@ class Schedule:
 		else:
 			try:
 				source_container = self.get_stations(source)
+				self.refpos = source_container['position']
 				destination_container = self.get_stations(destination)
 				source_stations = source_container['stations']
 				destination_stations = destination_container['stations']
@@ -81,7 +82,7 @@ class Schedule:
 				return reduce(lambda x,y: x+y, alive)
 			
 			initial_thread_count = 8
-			threads = [StationURLThread(j['source'], j['destination'], time, filters) for j in journeys]
+			threads = [StationURLThread(j['source'], j['destination'], time, filters, self.refpos) for j in journeys]
 			map(lambda x: x.start(), threads[:initial_thread_count])
 			
 			def is_duplicate(thread, completed_threads):
@@ -189,6 +190,7 @@ class StationURLThread(Thread):
 		self.refpos = refpos
 		self.did_run = False
 		#web.debug(self.refpos)
+		web.debug(Util().distance(self.refpos, {'latitude': '47.267923', 'longitude': '8.502808'}))
 		
 	def run(self):
 		self.did_run = True
@@ -208,7 +210,7 @@ class StationURLThread(Thread):
 		changesURL = (changes == None and '1000:1') or (changes == 0 and '0:2') or (changes == 1 and '1:3') or (changes == 2 and '2:4') or (changes == 3 and '3:5') or (changes == 4 and '4:5') or (changes > 4 and '1000:1')
 		
 		baseurl = 'http://fahrplan2.fahrplan.zvv.ch/bin/zvv/query.exe/dn?L=no_title'
-		data = urlencode({'usr':'www.zvv.ch','frames':'no','start.x':79,'start.y':9,'lg':'d','queryPageDisplayed':'yes','REQ0HafasNumCons0':'5:5'.encode('iso-8859-1'),\
+		data = urlencode({'usr':'www.zvv.ch','frames':'no','start.x':79,'start.y':9,'lg':'d','language':'e','queryPageDisplayed':'yes','REQ0HafasNumCons0':'5:5'.encode('iso-8859-1'),\
 								'REQ0HafasChangeTime':changetimeURL.encode('iso-8859-1'), 'REQ0HafasAttrExc.1':bicyclesURL, 'REQ0HafasSkipLongChanges':suppresslongURL,\
 								'REQ0HafasAttrExc.2':groupsURL, 'REQ0HafasNoOfChanges':changesURL.encode('iso-8859-1'),\
 								'gis1':'Haltestelle','REQ0JourneyStopsS0A':1, 'REQ0JourneyStopsS0G':self.fromStation.encode('iso-8859-1'),\
@@ -310,6 +312,8 @@ class StationURLThread(Thread):
 					lineNode.text = part['line']
 					vehicleNode = etree.SubElement(partNode, 'vehicle')
 					vehicleNode.text = part['vehicle']
+					notesNode = etree.SubElement(partNode, 'notes')
+					notesNode.text = part['notes']
 					durationNode = etree.SubElement(partNode, 'duration')
 					if part['to']['datetime'] and part['from']['datetime']:
 						durationNode.text = str(self._getDuration(part['from'], part['to']))
@@ -486,8 +490,12 @@ class StationURLThread(Thread):
 			part['to']['datetime'] = None
 			part['from']['track'] = ''
 			part['to']['track'] = ''
+			part['line'] = u'Walk'
 			part['vehicle'] = u'FOOT'
+	
+		part['notes'] = us(nodes[0].xpath("td[12]/text()"))
 		
+	
 		return part
 		
 	def _getDuration(self, fromP, toP):
