@@ -234,22 +234,23 @@ class StationURLThread(Thread):
 	def _checkQueryError(self):
 		return False
 	
-	def _parseRaw(self):
-		cl = perf.time()
-		web.debug('started')
-		
+	def _parseRaw(self):	
 		self._loadRawFromURL()
-		
-		res = perf.time() - cl
-		web.debug('ended')
-		web.debug('Took: %.2f' % res)
 		
 		parser = etree.HTMLParser(encoding="UTF-8")
 		tree = etree.parse(StringIO(self.response), parser)
 		self.data = tree
 		
 	def _setupXML(self):
+		cl = perf.time()
+		web.debug('Request Started')
+		
 		self._parseRaw()
+		
+		res = perf.time() - cl
+		web.debug('Request Took: %.2f' % res)
+		
+		pcl = perf.time()
 		""" Loads parsed data into an XML """
 		root = etree.Element('schedule')
 		
@@ -374,6 +375,8 @@ class StationURLThread(Thread):
 						if self.refpos is not None:
 							toPartDistanceNode.text = str(Util().distance(self.refpos, part['to']['location']))
 
+		parseres = perf.time() - pcl;
+		web.debug('Parsing Took: %.2f' % parseres)
 
 		self.xml = root
 		
