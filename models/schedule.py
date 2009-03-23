@@ -235,14 +235,14 @@ class StationURLThread(Thread):
 		return False
 	
 	def _parseRaw(self):
-		#cl = clock()
-		#web.debug('started')
+		cl = perf.time()
+		web.debug('started')
 		
 		self._loadRawFromURL()
 		
-		#res = clock() - cl
-		#web.debug('ended')
-		#web.debug('Took: %.2f' % res)
+		res = perf.time() - cl
+		web.debug('ended')
+		web.debug('Took: %.2f' % res)
 		
 		parser = etree.HTMLParser(encoding="UTF-8")
 		tree = etree.parse(StringIO(self.response), parser)
