@@ -274,6 +274,9 @@ class StationURLThread(Thread):
 			""" From Node """
 			fromIdNode = etree.SubElement(fromNode, 'id')
 			fromIdNode.text = str(fromL['id'])
+			if fromL['sbbid'] is not None:
+				n = etree.SubElement(fromNode, 'sbbid')
+				n.text = str(fromL['sbbid'])
 			departureNode = etree.SubElement(fromNode, 'datetime')
 			if link['from']['datetime']:
 				departureNode.text = str(datetime.strftime(link['from']['datetime'], '%Y-%m-%d %H:%M%z'))
@@ -299,6 +302,9 @@ class StationURLThread(Thread):
 			""" To Node """
 			toIdNode = etree.SubElement(toNode, 'id')
 			toIdNode.text = str(toL['id'])
+			if toL['sbbid'] is not None:
+				n = etree.SubElement(toNode, 'sbbid')
+				n.text = str(toL['sbbid'])
 			arrivalNode = etree.SubElement(toNode, 'datetime')
 			if link['to']['datetime']:
 				arrivalNode.text = str(datetime.strftime(toL['datetime'], '%Y-%m-%d %H:%M%z'))
@@ -335,6 +341,9 @@ class StationURLThread(Thread):
 					""" From Part Node """
 					fromPartIdNode = etree.SubElement(fromPartNode, 'id')
 					fromPartIdNode.text = str(part['from']['id'])
+					if part['from']['sbbid'] is not None:
+						n = etree.SubElement(fromPartNode, 'sbbid')
+						n.text = str(part['from']['sbbid'])
 					departurePartNode = etree.SubElement(fromPartNode, 'datetime')
 					if part['from']['datetime']:
 						departurePartNode.text = str(datetime.strftime(part['from']['datetime'], '%Y-%m-%d %H:%M%z'))
@@ -356,6 +365,9 @@ class StationURLThread(Thread):
 					""" To Part Node """
 					toPartIdNode = etree.SubElement(toPartNode, 'id')
 					toPartIdNode.text = str(part['to']['id'])
+					if part['to']['sbbid'] is not None:
+						n = etree.SubElement(toPartNode, 'sbbid')
+						n.text = str(part['to']['sbbid'])
 					arrivalPartNode = etree.SubElement(toPartNode, 'datetime')
 					if part['to']['datetime']:
 						arrivalPartNode.text = str(datetime.strftime(part['to']['datetime'], '%Y-%m-%d %H:%M%z'))
@@ -462,17 +474,24 @@ class StationURLThread(Thread):
 		part['to']['id'] = _getID(nodes[1])
 		
 		def locationForStation(station):
-			res = db.query('SELECT station_sbbid, station_lat, station_lon FROM zvv_station WHERE station_name = $name OR station_sbbid = $id', {'name' : station['name'], 'id' : station['id']})
+			res = db.query('SELECT station_sbbid, station_lat, station_lon FROM zvv_station WHERE station_name LIKE $name OR station_sbbid = $id', {'name' : station['name'], 'id' : station['id']})
 			if len(res):
 				row = res[0]
 				location = {'latitude':row['station_lat'], 'longitude':row['station_lon']}
-				return location
+				res = {'location':location, 'sbbid':row['station_sbbid']}
+				return res
 			else:
-				return None
+				return {'location':None, 'sbbid':None}
 		
-		part['from']['location'] = locationForStation(part['from'])
-		part['to']['location'] = locationForStation(part['to'])
-	
+		partData = locationForStation(part['from'])
+		part['from']['location'] = partData['location']
+		part['from']['sbbid'] = partData['sbbid']
+		
+		partData = locationForStation(part['to'])
+		part['to']['location'] = partData['location']
+		part['to']['sbbid'] = partData['sbbid']
+		
+		
 		def _getDate(nodeIndex):
 			try:
 				tDate = datetime.strptime(us(nodes[nodeIndex].xpath("td[3]/text()")), '%d.%m.%y')
