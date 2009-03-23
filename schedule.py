@@ -14,6 +14,8 @@ from urllib import unquote
 
 from models import schedule,geo
 
+import cProfile
+
 class GMT1(tzinfo):
 	def utcoffset(self, dt):
 		return timedelta(hours=1)
@@ -37,6 +39,22 @@ def requesttime(time):
 			except ValueError:
 				res = datetime.now(tz=GMT1())
 	return res
+
+def profile():
+	# A really slow request:
+	time_type = 'dep'
+	time_value = requesttime('2009-04-01 09:14')
+	source_type = 'addr'
+	source_value = u'Badenerstrasse 363, 8003, Zürich'
+	destination_type = 'addr'
+	destination_value = u'Schweighofstrasse 418, 8055 Zürich'
+	filters = {'changetime':0, 'changes':None, 'suppresslong':False, 'groups':False, 'bicycles':False, 'flat':False, 'apikey':None}
+	source = toarray(source_value, source_type)
+	destination = toarray(destination_value, destination_type)
+	time = toarray(time_value, time_type)
+	
+	s = schedule.Schedule()
+	xml = s.load_XML(source, destination, time, filters)	
 
 class Schedule:
 	def GET(self, source_type, source_value, destination_type, destination_value, time_type, time_value):

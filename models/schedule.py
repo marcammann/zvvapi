@@ -18,12 +18,13 @@ from urllib import urlencode, quote, unquote
 import web
 from datetime import datetime, tzinfo, timedelta, date
 from threading import Thread, enumerate
-from time import sleep
+from time import sleep, clock
+import time as perf
 from geo import Geocode, Util, Geostation
 import sys
 import re
 
-UPDATE_INTERVAL = 0.01
+UPDATE_INTERVAL = 0.1
 MAX_THREADS = 16
 
 db = web.database(dbn="mysql", db="zvv", user="zvv", pw="m1n3r4lw4ss3r")
@@ -36,6 +37,7 @@ class Schedule:
 		
 
 	def load_XML(self, source, destination, time, filters):
+		#web.debug(web.config.get('debug', False))
 		cachekey = source['value'] + str(source['type']) + destination['value'] + str(destination['type'])\
 					+ str(time['value']) + str(time['type']) + str(filters['changetime']) + \
 					str(filters['suppresslong']) + str(filters['groups']) + \
@@ -57,8 +59,8 @@ class Schedule:
 			
 			max_range = len(source_stations) > len(destination_stations) and len(source_stations) or len(destination_stations)
 			
-			web.debug(source_stations)
-			web.debug(destination_stations)
+			#web.debug(source_stations)
+			#web.debug(destination_stations)
 			
 
 			
@@ -76,7 +78,7 @@ class Schedule:
 					for k in range(0, min_src_range+1):
 						journeys.append({'source': source_stations[k], 'destination': destination_stations[i]})
 			
-			timeout = 20.0
+			timeout = 8.0
 			def alive_count(lst):
 				alive = map(lambda x:1 if x.isAlive() else 0, lst)
 				return reduce(lambda x,y: x+y, alive)
@@ -88,13 +90,15 @@ class Schedule:
 			def is_duplicate(thread, completed_threads):
 				for t in completed_threads:
 					if t.parsedFromStation == thread.parsedFromStation and t.parsedToStation == thread.parsedToStation:
-						web.debug(t.parsedFromStation + ':' + thread.parsedFromStation)
+						#web.debug(t.parsedFromStation + ':' + thread.parsedFromStation)
 						return True
 					else:
 						continue
 				return False
 			
-			web.debug(alive_count(threads))
+			#web.debug(alive_count(threads))
+			
+			cl = perf.time()
 			
 			ct = initial_thread_count
 			result_threads = []
@@ -102,24 +106,27 @@ class Schedule:
 			while alive_count(worker_threads) > 0 and timeout > 0:
 				timeout -= UPDATE_INTERVAL
 				for t in worker_threads:
-					if t.isAlive() is False and t.xml is None and t.did_run is True:
+					"""if t.isAlive() is False and t.xml is None and t.did_run is True:
 						worker_threads.remove(t)
 						if ct < len(threads):
-							threads[ct].start()
-							timeout += 10
-							web.debug('spawning thread because of empty xml')
+							#threads[ct].start()
+							#timeout += 10
+							#web.debug('spawning thread because of empty xml')
 							ct += 1
 					elif t.isAlive() is False and t.xml is not None and is_duplicate(t, result_threads) is True:
 						worker_threads.remove(t)
 						if ct < len(threads):
-							threads[ct].start()
-							timeout += 10
-							web.debug('spawning thread because of duplicateness')
-							ct += 1
-					elif t.isAlive() is False and t.xml is not None and is_duplicate(t, result_threads) is False:
+							#threads[ct].start()
+							#timeout += 10
+							#web.debug('spawning thread because of duplicateness')
+							ct += 1"""
+					#el
+					if t.isAlive() is False and t.xml is not None and is_duplicate(t, result_threads) is False:
 						worker_threads.remove(t)
 						result_threads.append(t)
 				sleep(UPDATE_INTERVAL)
+			
+			clres = perf.time() - cl
 			
 			for t in threads:
 				if t.isAlive() is  False and t.xml is not None and is_duplicate(t, result_threads) is False:
@@ -132,9 +139,11 @@ class Schedule:
 			requestTimeNode = etree.SubElement(requestNode, 'querytime')
 			requestTimeNode.text = datetime.today().strftime("%Y-%m-%d %H:%M:%S%z")
 			requestValueNode = etree.SubElement(requestNode, 'queryvalue')
-			requestValueNode.text = web.url()
+			#requestValueNode.text = web.url()
 			requestCacheKeyNode = etree.SubElement(requestNode, 'cachekey')
 			requestCacheKeyNode.text = cachekey;
+			requestTimeTakenNode = etree.SubElement(requestNode, 'backendtime')
+			requestTimeTakenNode.text = '%.2f' % clres
 			
 			node = etree.SubElement(requestNode, 'time')
 			node.text = time['value'].strftime("%Y-%m-%d %H:%M")
@@ -189,8 +198,6 @@ class StationURLThread(Thread):
 		self.xml = None
 		self.refpos = refpos
 		self.did_run = False
-		#web.debug(self.refpos)
-		web.debug(Util().distance(self.refpos, {'latitude': '47.267923', 'longitude': '8.502808'}))
 		
 	def run(self):
 		self.did_run = True
@@ -228,7 +235,14 @@ class StationURLThread(Thread):
 		return False
 	
 	def _parseRaw(self):
+		#cl = clock()
+		#web.debug('started')
+		
 		self._loadRawFromURL()
+		
+		#res = clock() - cl
+		#web.debug('ended')
+		#web.debug('Took: %.2f' % res)
 		
 		parser = etree.HTMLParser(encoding="UTF-8")
 		tree = etree.parse(StringIO(self.response), parser)
