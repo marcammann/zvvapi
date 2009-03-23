@@ -45,7 +45,7 @@ class Geocode:
 	
 	def _load_KML(self):
 		base_URL = 'http://maps.google.ch'
-		data = urlencode({'q':self.address.encode('utf-8'), 'output':'kml'})
+		data = urlencode({'q':self.address.encode('utf-8'), 'output':'kml', 'ie':'UTF8', 'oe':'UTF8'})
 		request_URL = base_URL + '?' + data
 		h = httplib2.Http()
 		resp, content = h.request(request_URL, "GET")

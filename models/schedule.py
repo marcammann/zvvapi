@@ -474,7 +474,8 @@ class StationURLThread(Thread):
 		part['to']['id'] = _getID(nodes[1])
 		
 		def locationForStation(station):
-			res = db.query('SELECT station_sbbid, station_lat, station_lon FROM zvv_station WHERE station_name LIKE $name OR station_sbbid = $id', {'name' : station['name'], 'id' : station['id']})
+			web.debug(station['name'])
+			res = db.query('SELECT station_sbbid, station_lat, station_lon FROM zvv_station WHERE station_name LIKE $name OR station_sbbid = $id', {'name' : station['name'].encode("utf-8"), 'id' : station['id'].encode("utf-8")})
 			if len(res):
 				row = res[0]
 				location = {'latitude':row['station_lat'], 'longitude':row['station_lon']}
