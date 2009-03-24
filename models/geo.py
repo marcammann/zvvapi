@@ -49,7 +49,8 @@ class Geocode:
 		request_URL = base_URL + '?' + data
 		h = httplib2.Http()
 		resp, content = h.request(request_URL, "GET")
-		self._parse_KML(content)
+		if (len(content)):		
+			self._parse_KML(content)
 	
 	def _parse_KML(self, content):
 		tree = etree.parse(StringIO(content))

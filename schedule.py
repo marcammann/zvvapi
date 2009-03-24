@@ -14,6 +14,10 @@ from urllib import unquote
 
 from models import schedule,geo
 
+import logging
+LOG_FILENAME = '/tmp/logging_example.out'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG,)
+
 import cProfile
 
 class GMT1(tzinfo):
@@ -45,13 +49,13 @@ def profile():
 	time_type = 'dep'
 	time_value = requesttime('2009-04-01 09:14')
 	#source_type = 'addr'
-	#source_value = u'Badenerstrasse 363, 8003, Zürich'
+	#source_value = u'Badenerstrasse 363, 8003, Zrich'
 	#destination_type = 'addr'
-	#destination_value = u'Schweighofstrasse 418, 8055 Zürich'
+	#destination_value = u'Schweighofstrasse 418, 8055 Zrich'
 	source_type = 'addr'
 	source_value = u'Zürich, Schaufelbergerstrasse'
 	destination_type = 'stat'
-	destination_value = u'Paradeplatz'	
+	destination_value = u'Zürich, Thurgauerstrasse 4'	
 	filters = {'changetime':0, 'changes':None, 'suppresslong':False, 'groups':False, 'bicycles':False, 'flat':False, 'apikey':None}
 	source = toarray(source_value, source_type)
 	destination = toarray(destination_value, destination_type)
@@ -59,6 +63,7 @@ def profile():
 	
 	s = schedule.Schedule()
 	xml = s.load_XML(source, destination, time, filters)	
+	web.debug(xml)
 
 class Schedule:
 	def GET(self, source_type, source_value, destination_type, destination_value, time_type, time_value):
@@ -66,6 +71,14 @@ class Schedule:
 		source_type = type(source_type)
 		destination_type = type(destination_type)
 		
+		try:
+			dest = destination_value.encode('iso-8859-1')
+			destination_value = unicode(dest, 'utf-8')
+			src = source_value.encode('iso-8859-1')
+			source_value = unicode(src, 'utf-8')
+		except UnicodeDecodeError:
+			pass
+
 		source = toarray(unicode(unquote(source_value)), source_type)
 		destination = toarray(unicode(unquote(destination_value)), destination_type)
 		
@@ -76,7 +89,7 @@ class Schedule:
 		
 		filters = web.input(changetime=0, changes=None, suppresslong=False,\
 							groups=False, bicycles=False, flat=False, apikey=None)
-							
+						
 		s = schedule.Schedule()
 		xml = s.load_XML(source, destination, time, filters)
 		
