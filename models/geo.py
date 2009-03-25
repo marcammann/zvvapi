@@ -59,7 +59,67 @@ class Geocode:
 			self.longitude = tree.xpath("//*[local-name()='longitude']/text()")[0]
 		except IndexError:
 			return
-					
+
+def row_to_station(row):
+	location = {'latitude':row['station_lat'], 'longitude':row['station_lon']}
+	
+	try:
+		location['distance'] = row['distance']
+	except Exception:
+		pass
+	
+	#if row['station_zvvid']:
+	#	sbbid = '10'+str(row['station_zvvid'])
+	#else:
+	sbbid = row['station_sbbid']
+	
+	if row['station_zvvid']:
+		eid = row['station_zvvid']
+	else:
+		eid = row['station_sbbid']
+		
+	
+	station = {'id':eid,
+				'sbbid':sbbid,
+				'location':location,
+				'zvvid':row['station_zvvid'],
+				'name':row['station_name']}
+	return station
+
+class StationData:
+	def __init__(self, station):
+		self.data = None
+		self._load_station(station)
+		
+	def _load_station(self, station):
+		res = db.query('SELECT * FROM zvv_station WHERE station_name LIKE $name OR station_sbbid = $id OR station_zvvid = $id OR station_zvvid = $zvvid', {'name' : station['name'], 'id' : station['id'], 'zvvid' : station['zvvid']})
+		if len(res):
+			row = res[0]
+			self.data = row_to_station(row)
+			return
+
+		self.data = None
+			
+class StationGeoData:
+	def __init__(self, latitude, longitude):
+		self.stations = None
+		self._load_stations(latitude, longitude)
+	
+	def _load_stations(self, latitude, longitude):
+		query = 'SELECT DISTINCT station_name, station_lat, station_lon, station_sbbid, station_zvvid, 6367.45 * 2 * ASIN(SQRT(  POWER(SIN(($latitude - dest.station_lat) * pi()/180 / 2), 2) + COS($latitude * pi()/180) *  COS(dest.station_lat * pi()/180) * POWER(SIN(($longitude - dest.station_lon) * pi()/180 / 2), 2)  )) as distance \
+				FROM zvv_station dest GROUP BY station_name ORDER BY distance LIMIT 20'
+		res = db.query(query, {'latitude':latitude, 'longitude':longitude})
+		if len(res):
+			self.stations = [row_to_station(row) for row in res]
+			return
+
+		self.stations = None
+		return
+	
+	def get_stations(self):
+		return self.stations
+		
+			
 class Geostation:
 	def __init__(self, latitude, longitude):
 		self.stations = None

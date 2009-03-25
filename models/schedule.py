@@ -139,7 +139,7 @@ class Schedule:
 			requestTimeNode = etree.SubElement(requestNode, 'querytime')
 			requestTimeNode.text = datetime.today().strftime("%Y-%m-%d %H:%M:%S%z")
 			requestValueNode = etree.SubElement(requestNode, 'queryvalue')
-			#requestValueNode.text = web.url()
+			requestValueNode.text = web.url()
 			requestCacheKeyNode = etree.SubElement(requestNode, 'cachekey')
 			requestCacheKeyNode.text = cachekey;
 			requestTimeTakenNode = etree.SubElement(requestNode, 'backendtime')

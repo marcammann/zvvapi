@@ -14,7 +14,7 @@ import schedule
 import sys
 
 urls = (r"/schedule/(stat:|addr:|wgs:|)(.+)/(stat:|addr:|wgs:|)(.+)/(dep:|arr:|)([\d:\.+ -]+)/", "schedule.Schedule",
-		r"/station/(stat:|addr:|wgs:|)(.+)/([\d:\.+ -]+)/", "schedule.Station")
+		r"/station/(stat:|addr:|wgs:|id:)(.+)/([\d:\.+ -]+)/", "schedule.Station")
 
 app = web.application(urls, globals(), autoreload=True)
 

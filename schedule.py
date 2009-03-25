@@ -12,7 +12,7 @@ import web
 from datetime import datetime, tzinfo, timedelta
 from urllib import unquote
 
-from models import schedule,geo
+from models import schedule,geo,station
 
 import logging
 LOG_FILENAME = '/tmp/logging_example.out'
@@ -100,11 +100,24 @@ class Station:
 	def GET(self, pos_type, pos_value, time_value):
 		# Sanitize From/Time
 		pos_type = type(pos_type)
+		
+		try:
+			pos_value = unicode(pos_value.encode('iso-8859-1'), 'utf-8')
+		except UnicodeDecodeError:
+			pass
+			
 		pos = toarray(unquote(pos_value), pos_type)
 		
 		time_value = requesttime(unquote(time_value))
 		filters = web.input(apikey=None)
 		
+		s = station.Station(pos, time_value, filters)
+		xml = u''
+		if s.error:
+			xml = s.xmlerror
+		else:
+			xml = s.xml
+		
 		web.header('Content-Type', 'text/xml')
-		return '<?xml version="1.0"?><station>foo</station>'
+		return '<?xml version="1.0"?><station>'+ s.xmlinfo + xml + '</station>'
 		
