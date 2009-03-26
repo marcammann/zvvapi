@@ -12,6 +12,9 @@ import web
 from datetime import datetime, tzinfo, timedelta
 from urllib import unquote
 
+from StringIO import StringIO
+from lxml import etree
+
 from models import schedule,geo,station
 
 import logging
@@ -88,13 +91,24 @@ class Schedule:
 		time = toarray(time_value, time_type)
 		
 		filters = web.input(changetime=0, changes=None, suppresslong=False,\
-							groups=False, bicycles=False, flat=False, apikey=None)
+							groups=False, bicycles=False, flat=False, apikey=None, format=u'xml')
 						
 		s = schedule.Schedule()
 		xml = s.load_XML(source, destination, time, filters)
 		
-		web.header('Content-Type', 'text/xml')
-		return '<?xml version="1.0"?><schedules>' + xml + '</schedules>'
+		
+		xmlcontent = '<?xml version="1.0" encoding="UTF-8"?><schedules>' + xml + '</schedules>'
+		if (filters['format'] == u'xml'):
+			web.header('Content-Type', 'text/xml; charset=utf-8')
+			return xmlcontent
+		elif (filters['format'] == u'html'):
+			web.header('Content-Type', 'text/html; charset=utf-8')
+			xml_tree = etree.parse(StringIO(xmlcontent))
+			xsl_tree = etree.parse(open('./xsl/schedule.xsl', 'r'))
+			transform = etree.XSLT(xsl_tree)
+			result_tree = transform(xml_tree)
+			return etree.tostring(result_tree, encoding='utf8')
+		
 
 class Station:
 	def GET(self, pos_type, pos_value, time_value):
