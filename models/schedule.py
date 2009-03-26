@@ -37,6 +37,7 @@ class Schedule:
 		
 
 	def load_XML(self, source, destination, time, filters):
+		start_time = perf.time()
 		#web.debug(web.config.get('debug', False))
 		cachekey = source['value'] + str(source['type']) + destination['value'] + str(destination['type'])\
 					+ str(time['value']) + str(time['type']) + str(filters['changetime']) + \
@@ -158,6 +159,10 @@ class Schedule:
 			for node in nodes:
 				if node is not None:
 					elementNode = root.append(node)
+			
+			end_time = perf.time() - start_time
+			node = etree.SubElement(requestNode, 'proctime')
+			node.text = str(end_time)
 			
 			return etree.tostring(root, method='xml', encoding="UTF-8")
 			"""memcache.add(cachekey, file.getvalue())"""
