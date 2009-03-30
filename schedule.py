@@ -15,6 +15,7 @@ from urllib import unquote
 from StringIO import StringIO
 from lxml import etree
 
+
 from models import schedule,geo,station
 
 import logging
@@ -36,16 +37,20 @@ toarray = lambda v, t: {'value':v, 'type':unicode(t)}
 timetype = lambda t: t is u'' and 'dep' or t.split(':')[0]
 def requesttime(time):
 	try:
-		res = datetime.strptime(datetime.now(tz=GMT1()).strftime("%Y-%m-%d") + time, '%Y-%m-%d %H:%M')
+		res = datetime.strptime(datetime.now(tz=GMT1()).strftime("%Y-%m-%d") + ' ' + time, '%Y-%m-%d %H:%M')
+		return res
 	except ValueError:
 		try:
 			res = datetime.strptime(time, '%d.%m.%Y %H:%M')
+			return res
 		except ValueError:
 			try:
 				res = datetime.strptime(time, '%Y-%m-%d %H:%M')
+				return res
 			except ValueError:
 				res = datetime.now(tz=GMT1())
-	return res
+				return res
+		return res
 
 def profile():
 	# A really slow request:
@@ -72,8 +77,9 @@ class Schedule:
 	def GET(self, source_type, source_value, destination_type, destination_value, time_type, time_value):
 		# Sanitize From/To/Types
 		source_type = type(source_type)
-		destination_type = type(destination_type)
-		
+		destination_type = type(destination_type)	
+		logging.debug(time_value)		
+	
 		try:
 			dest = destination_value.encode('iso-8859-1')
 			destination_value = unicode(dest, 'utf-8')
@@ -88,6 +94,7 @@ class Schedule:
 		# Sanitize Date/Time
 		time_type = timetype(time_type)
 		time_value = requesttime(unquote(time_value))
+		logging.debug(time_value)
 		time = toarray(time_value, time_type)
 		
 		filters = web.input(changetime=0, changes=None, suppresslong=False,\
