@@ -13,8 +13,8 @@ import web
 import schedule
 import sys
 
-urls = (r"/schedule/(stat:|addr:|wgs:|)(.+)/(stat:|addr:|wgs:|)(.+)/(dep:|arr:|)([\d:\.+ -]+)/", "schedule.Schedule",
-		r"/station/(stat:|addr:|wgs:|id:)(.+)/([\d:\.+ -]+)/", "schedule.Station")
+urls = (r"/schedule/(stat:|addr:|wgs:|)(.+)/(stat:|addr:|wgs:|)(.+)/(dep:|arr:|)([^/]+).+", "schedule.Schedule",
+		r"/station/(stat:|addr:|wgs:|id:)(.+)/([^/]+).+", "schedule.Station")
 
 app = web.application(urls, globals(), autoreload=True)
 

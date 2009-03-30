@@ -111,15 +111,31 @@ class Station:
 			raise
 		
 	def _load_data(self):
-		t = StationThread(self.stations[0], self._time, self._filters)
-		t.start()
-		while t.isAlive():
-			sleep(0.02)
+		threads = [StationThread(station, self._time, self._filters) for station in self.stations[:3]];
+		map(lambda x: x.start(), threads)
+		def alive_count(lst):
+			alive = map(lambda x:1 if x.isAlive() else 0, lst)
+			return reduce(lambda x,y: x+y, alive)
 		
-		self.xml = t.xml
+		timeout = 10
+		update_interval = 0.2
+		while alive_count(threads) > 0 and timeout >  0:
+			sleep(update_interval)
+			timeout -= update_interval
+			
+		self.data = [{'xml':t.xmldata, 'station':t.station} for t in threads]
 		
 	def _setup_xml(self):
-		pass
+	 	root = etree.Element('stations')
+	
+		for row in self.data:
+			if (row['xml'] is not None):
+				snode = etree.SubElement(root, 'station')
+				s = station_to_node(row['station'], 'from')		
+				snode.append(s)
+				snode.append(row['xml'])
+		
+		self.xml = etree.tostring(root, method='xml', encoding='UTF-8')
 		
 	def _setup_xmlerror(self):
 		root = etree.Element('error')
@@ -158,6 +174,7 @@ class StationThread(Thread):
 		
 		self._response = None
 		
+		self.station = station
 		self.xml = None
 		self.xmldata = None
 		self.data = None
@@ -200,10 +217,10 @@ class StationThread(Thread):
 		
 	
 	def _setup_xml(self):
-		root = etree.Element('times')
+		root = etree.Element('departures')
 		try:
 			for element in self.data:
-				tnode = etree.SubElement(root, 'entry')
+				tnode = etree.SubElement(root, 'departure')
 				web.debug(element)
 				s = station_to_node(element['station_eol'], 'station_eol')
 				
